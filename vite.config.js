@@ -2,8 +2,10 @@ import {defineConfig} from 'vite';
 import {hydrogen} from '@shopify/hydrogen/vite';
 import {oxygen} from '@shopify/mini-oxygen/vite';
 import {vitePlugin as remix} from '@remix-run/dev';
-import {vercelPreset} from '@vercel/remix';
+import vercelRemix from '@vercel/remix';
 import tsconfigPaths from 'vite-tsconfig-paths';
+
+const {vercelPreset} = vercelRemix;
 
 export default defineConfig({
   plugins: [
