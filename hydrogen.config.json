@@ -1,0 +1,9 @@
+{
+  "name": "landing-page",
+  "type": "hydrogen",
+  "storefront": {
+    "id": "gid://shopify/HydrogenStorefront/1",
+    "title": "Landing Page",
+    "productionUrl": "https://landing.zetee1012.myshopify.com"
+  }
+}

@@ -1,0 +1,33 @@
+.landing-hero {
+  padding: 4rem 1rem;
+  background: linear-gradient(180deg,#ffffff 0%, #f7f9fc 100%);
+}
+.landing-hero .container {
+  display: flex;
+  gap: 2rem;
+  align-items: center;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+.hero-content {
+  flex: 1 1 480px;
+}
+.hero-title {
+  font-size: 2.25rem;
+  margin: 0 0 0.5rem 0;
+}
+.hero-sub {
+  color: #556;
+  margin-bottom: 1.25rem;
+}
+.hero-actions .btn {
+  display: inline-block;
+  padding: 0.75rem 1rem;
+  border-radius: 6px;
+  text-decoration: none;
+  margin-right: 0.5rem;
+}
+.btn.primary { background: #0b69ff; color: #fff }
+.btn.ghost { border: 1px solid #d0d7de; color:#123 }
+.hero-media { flex: 1 1 420px; }
+.hero-media img { width: 100%; border-radius: 8px; }
