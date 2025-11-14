@@ -1,7 +1,15 @@
 {
-  "buildCommand": "npm run build",
-  "outputDirectory": "dist/server",
+  "buildCommand": "npm run build && mkdir -p build && cp -r dist/server/* build/",
+  "outputDirectory": "build",
   "framework": "remix",
+  "functions": {
+    "api/**/*.ts": {
+      "runtime": "nodejs20.x"
+    },
+    "api/**/*.js": {
+      "runtime": "nodejs20.x"
+    }
+  },
   "env": {
     "PUBLIC_STOREFRONT_API_TOKEN": "@public_storefront_api_token",
     "PUBLIC_STORE_DOMAIN": "@public_store_domain",
