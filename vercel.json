@@ -1,8 +1,13 @@
 {
   "buildCommand": "npm run build",
-  "outputDirectory": "dist/server",
-  "framework": "other",
-  "runtime": "nodejs20.x",
+  "outputDirectory": "dist",
+  "framework": "remix",
+  "rewrites": [
+    {
+      "source": "/:path(.*)",
+      "destination": "/index.js"
+    }
+  ],
   "env": {
     "PUBLIC_STOREFRONT_API_TOKEN": "@public_storefront_api_token",
     "PUBLIC_STORE_DOMAIN": "@public_store_domain",
