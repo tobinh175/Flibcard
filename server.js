@@ -14,7 +14,6 @@ import {
   createCustomerAccountClient,
 } from '@shopify/hydrogen';
 import { installGlobals } from '@remix-run/node';
-import compression from 'compression';
 import express from 'express';
 
 import {AppSession} from '~/lib/session.server';
@@ -26,8 +25,7 @@ installGlobals();
 // Create Express app
 const app = express();
 
-// Middleware
-app.use(compression());
+// Middleware - serve static files
 app.use(express.static('dist/client', { maxAge: '1 year' }));
 
 /**
