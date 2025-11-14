@@ -1,5 +1,7 @@
 {
   "buildCommand": "npm run build && mkdir -p build && cp -r dist/server/* build/ && cp -r dist/client build/public 2>/dev/null || true",
   "outputDirectory": "build",
-  "framework": "remix"
+  "framework": "remix",
+  "pollingInterval": 10,
+  "regions": ["iad1"]
 }
