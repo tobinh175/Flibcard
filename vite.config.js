@@ -23,8 +23,6 @@ export default defineConfig({
     optimizeDeps: {
       include: ['typographic-base'],
     },
-    noExternal: [],
-    external: ['node:crypto', 'node:util', 'node:buffer', 'node:stream', 'node:events', 'node:assert', 'node:path', 'node:fs'],
   },
   optimizeDeps: {
     include: [

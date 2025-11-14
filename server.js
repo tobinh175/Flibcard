@@ -13,116 +13,104 @@ import {
   storefrontRedirect,
   createCustomerAccountClient,
 } from '@shopify/hydrogen';
-import { installGlobals } from '@remix-run/node';
-import express from 'express';
 
 import {AppSession} from '~/lib/session.server';
 import {getLocaleFromRequest} from '~/lib/utils';
 
-// Polyfill Web APIs for Node.js
-installGlobals();
-
-// Create Express app
-const app = express();
-
-// Middleware - serve static files
-app.use(express.static('dist/client', { maxAge: '1 year' }));
-
 /**
- * Create a middleware that handles Hydrogen requests
+ * Export a fetch handler in module format compatible with Oxygen and Vercel.
  */
-app.all('*', async (request, res) => {
-  try {
-    // Get environment variables from process.env (set by Vercel)
-    const env = {
-      SESSION_SECRET: process.env.SESSION_SECRET,
-      PUBLIC_STOREFRONT_API_TOKEN: process.env.PUBLIC_STOREFRONT_API_TOKEN,
-      PRIVATE_STOREFRONT_API_TOKEN: process.env.PRIVATE_STOREFRONT_API_TOKEN,
-      PUBLIC_STORE_DOMAIN: process.env.PUBLIC_STORE_DOMAIN,
-      PUBLIC_STOREFRONT_ID: process.env.PUBLIC_STOREFRONT_ID,
-      PUBLIC_CUSTOMER_ACCOUNT_API_CLIENT_ID: process.env.PUBLIC_CUSTOMER_ACCOUNT_API_CLIENT_ID,
-      SHOP_ID: process.env.SHOP_ID,
-    };
+export default {
+  /**
+   * @param {Request} request
+   * @param {Env} env
+   * @param {ExecutionContext} executionContext
+   * @return {Promise<Response>}
+   */
+  async fetch(request, env, executionContext) {
+    try {
+      /**
+       * Open a cache instance in the worker and a custom session instance.
+       */
+      if (!env?.SESSION_SECRET) {
+        throw new Error('SESSION_SECRET environment variable is not set');
+      }
 
-    if (!env.SESSION_SECRET) {
-      throw new Error('SESSION_SECRET environment variable is not set');
-    }
+      const waitUntil = executionContext.waitUntil.bind(executionContext);
+      const [cache, session] = await Promise.all([
+        caches.open('hydrogen'),
+        AppSession.init(request, [env.SESSION_SECRET]),
+      ]);
 
-    // Create a mock ExecutionContext for Oxygen API compatibility
-    const executionContext = {
-      waitUntil: () => Promise.resolve(),
-    };
+      /**
+       * Create Hydrogen's Storefront client.
+       */
+      const {storefront} = createStorefrontClient({
+        cache,
+        waitUntil,
+        i18n: getLocaleFromRequest(request),
+        publicStorefrontToken: env.PUBLIC_STOREFRONT_API_TOKEN,
+        privateStorefrontToken: env.PRIVATE_STOREFRONT_API_TOKEN,
+        storeDomain: env.PUBLIC_STORE_DOMAIN,
+        storefrontId: env.PUBLIC_STOREFRONT_ID,
+        storefrontHeaders: getStorefrontHeaders(request),
+      });
 
-    const [cache, session] = await Promise.all([
-      // Use Node.js cache API if available, otherwise create a simple cache
-      Promise.resolve(new Map()),
-      AppSession.init(request, [env.SESSION_SECRET]),
-    ]);
-
-    const {storefront} = createStorefrontClient({
-      cache,
-      waitUntil: executionContext.waitUntil,
-      i18n: getLocaleFromRequest(request),
-      publicStorefrontToken: env.PUBLIC_STOREFRONT_API_TOKEN,
-      privateStorefrontToken: env.PRIVATE_STOREFRONT_API_TOKEN,
-      storeDomain: env.PUBLIC_STORE_DOMAIN,
-      storefrontId: env.PUBLIC_STOREFRONT_ID,
-      storefrontHeaders: getStorefrontHeaders(request),
-    });
-
-    const customerAccount = createCustomerAccountClient({
-      waitUntil: executionContext.waitUntil,
-      request,
-      session,
-      customerAccountId: env.PUBLIC_CUSTOMER_ACCOUNT_API_CLIENT_ID,
-      shopId: env.SHOP_ID,
-    });
-
-    const cart = createCartHandler({
-      storefront,
-      customerAccount,
-      getCartId: cartGetIdDefault(request.headers),
-      setCartId: cartSetIdDefault(),
-    });
-
-    const handleRequest = createRequestHandler({
-      build: remixBuild,
-      mode: process.env.NODE_ENV || 'production',
-      getLoadContext: () => ({
+      /**
+       * Create a client for Customer Account API.
+       */
+      const customerAccount = createCustomerAccountClient({
+        waitUntil,
+        request,
         session,
-        waitUntil: executionContext.waitUntil,
+        customerAccountId: env.PUBLIC_CUSTOMER_ACCOUNT_API_CLIENT_ID,
+        shopId: env.SHOP_ID,
+      });
+
+      const cart = createCartHandler({
         storefront,
         customerAccount,
-        cart,
-        env,
-      }),
-    });
+        getCartId: cartGetIdDefault(request.headers),
+        setCartId: cartSetIdDefault(),
+      });
 
-    const response = await handleRequest(request);
+      /**
+       * Create a Remix request handler and pass
+       * Hydrogen's Storefront client to the loader context.
+       */
+      const handleRequest = createRequestHandler({
+        build: remixBuild,
+        mode: process.env.NODE_ENV,
+        getLoadContext: () => ({
+          session,
+          waitUntil,
+          storefront,
+          customerAccount,
+          cart,
+          env,
+        }),
+      });
 
-    if (session.isPending) {
-      response.headers.set('Set-Cookie', await session.commit());
+      const response = await handleRequest(request);
+
+      if (session.isPending) {
+        response.headers.set('Set-Cookie', await session.commit());
+      }
+
+      if (response.status === 404) {
+        /**
+         * Check for redirects only when there's a 404 from the app.
+         * If the redirect doesn't exist, then `storefrontRedirect`
+         * will pass through the 404 response.
+         */
+        return storefrontRedirect({request, response, storefront});
+      }
+
+      return response;
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error(error);
+      return new Response('An unexpected error occurred', {status: 500});
     }
-
-    if (response.status === 404) {
-      return storefrontRedirect({request, response, storefront});
-    }
-
-    // Convert Remix Response to Express response
-    response.headers.forEach((value, key) => {
-      res.setHeader(key, value);
-    });
-    res.status(response.status);
-    
-    if (response.body) {
-      res.send(await response.text());
-    } else {
-      res.end();
-    }
-  } catch (error) {
-    console.error(error);
-    res.status(500).send('An unexpected error occurred');
-  }
-});
-
-export default app;
+  },
+};

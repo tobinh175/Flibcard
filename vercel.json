@@ -1,11 +1,9 @@
 {
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
-  "framework": "remix",
-  "rewrites": [
-    {
-      "source": "/:path(.*)",
-      "destination": "/index.js"
+  "functions": {
+    "api/index.js": {
+      "runtime": "nodejs20.x"
     }
-  ]
+  }
 }
